@@ -1,0 +1,12 @@
+{
+  "name": "agentmux",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "agentmux": "src/index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  }
+}
