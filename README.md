@@ -1,157 +1,100 @@
-# vigil
+# redline
 
-Background cross-review for AI coding agents. Run Claude Code or Codex CLI as your main agent, and vigil automatically spins up the other agent in the background to review your changes.
+Automatic code review for Claude Code, powered by Codex via OpenRouter.
 
-```
-vigil claude --dangerously-skip-permissions
-```
-
-While you work with Claude, Codex quietly reviews each completed task and writes feedback to `.vigil/reviews/`. Claude checks for reviews after each task, presents any issues found, and asks if you'd like to address them. The same works in reverse with `vigil codex`.
+Run `redline` in any git repo to install a Claude Code hook. Every time Claude finishes a response, Codex automatically reviews uncommitted changes and feeds the results back into Claude's context.
 
 ## How it works
 
 ```
-vigil (parent process)
-  ├── watcher (background) → polls .vigil/tasks/, runs reviews, writes .vigil/reviews/
-  ├── main agent (foreground, inherited stdio — you interact with it directly)
-  └── on exit → kills watcher, cleans up
+You're working in Claude Code as normal:
+
+  claude --dangerously-skip-permissions
+
+Behind the scenes, a Stop hook fires after each Claude response:
+
+  Claude Code Stop event
+    → redline review --hook
+    → codex exec review --uncommitted
+    → review fed back to Claude as hook output
+    → Claude reads the review and tells you about any issues
 ```
 
-1. You run `vigil claude ...` or `vigil codex ...` with your normal flags
-2. Vigil sets OpenRouter env vars, injects the review protocol instructions, and spawns a background watcher
-3. The main agent runs exactly as if you launched it directly — all args pass through verbatim
-4. After each task, the main agent writes a file to `.vigil/tasks/`
-5. The watcher detects new tasks and invokes the opposite agent to review changes
-6. Reviews appear in `.vigil/reviews/`, and the main agent reads and presents them to you
+Redline installs a single hook in `.claude/settings.local.json`. It's stateless — no background processes, no watchers, no extra directories.
 
 ## Setup
 
-Requires [Bun](https://bun.sh), and at least one of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) or [Codex CLI](https://github.com/openai/codex). Install both for cross-review.
+Requires [Bun](https://bun.sh), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), and [Codex CLI](https://github.com/openai/codex).
 
 ```bash
-git clone <repo-url> && cd vigil
+git clone https://github.com/alexanderatallah/redline.git
+cd redline
 bun install
 bun link
 ```
 
 ### Authentication
 
-Vigil routes all inference through [OpenRouter](https://openrouter.ai). Authenticate with one of:
+All inference is routed through [OpenRouter](https://openrouter.ai). Authenticate with one of:
 
 ```bash
 # Option 1: OAuth (opens browser)
-vigil login
+redline login
 
 # Option 2: Environment variable
 export OPENROUTER_API_KEY=sk-or-...
 ```
 
-## Usage
+## Quick start
 
 ```bash
-# Interactive Claude Code session with background Codex review
-vigil claude --dangerously-skip-permissions
-
-# Interactive Codex session with background Claude review
-vigil codex --full-auto
-
-# Non-interactive one-shot
-vigil claude -p "refactor the auth module"
-
-# All flags pass through — these are the same flags you'd use directly
-vigil claude --dangerously-skip-permissions --model opus
-vigil codex exec "fix the failing tests"
+cd your-project
+redline              # installs the hook, done
+# now use Claude Code normally — reviews happen automatically
 ```
 
-### Commands
+## Commands
 
 | Command | Description |
 |---------|-------------|
-| `vigil claude [args...]` | Run Claude Code with background Codex review |
-| `vigil codex [args...]` | Run Codex CLI with background Claude review |
-| `vigil login` | Authenticate with OpenRouter via OAuth PKCE |
-| `vigil config` | Show current configuration |
-| `vigil config set <key> <value>` | Update a config value |
-| `vigil config reset` | Reset to defaults |
+| `redline` | Enable reviews with the default model (`openai/gpt-5.4`) |
+| `redline <model>` | Enable reviews with a custom model (any OpenRouter slug) |
+| `redline off` | Disable reviews (remove the hook) |
+| `redline review [model]` | Run a single review manually, print to stdout |
+| `redline review [model] --hook` | Run a review and output Claude Code hook JSON |
+| `redline login` | Authenticate with OpenRouter via OAuth |
+| `redline config` | Show current configuration |
+| `redline config set <key> <value>` | Set a config value |
+| `redline config reset` | Reset config to defaults |
+| `redline --help` | Show help |
+| `redline --version` | Show version |
 
-## The `.vigil/` protocol
+### Model customization
 
-Vigil creates a `.vigil/` directory in your repo root (auto-added to `.gitignore`):
+The default review model is `openai/gpt-5.4`. Pass any [OpenRouter model slug](https://openrouter.ai/models) to customize:
 
-```
-.vigil/
-  tasks/       ← main agent writes here after each task
-  reviews/     ← background reviewer writes here
-  watcher.pid  ← PID of background watcher
-  watcher.log  ← watcher debug log
-```
-
-### Task files
-
-Written by the main agent after completing a task:
-
-```markdown
----
-task: fix-auth
-agent: claude
-model: anthropic/claude-opus-4.6
-timestamp: 2026-03-22T10:30:00Z
-description: Fixed authentication bug in login flow
----
+```bash
+redline openai/gpt-5.4-pro       # use GPT-5.4 Pro
+redline anthropic/claude-opus-4.6 # use Claude Opus (reviewing its own code)
+redline google/gemini-2.5-pro     # use Gemini
 ```
 
-### Review files
+## Why Claude Code only?
 
-Written by the background reviewer:
+Codex CLI's hook system can't feed output back into the agent's context. Claude Code's `Stop` hook supports a `decision: "block"` response with a `reason` field that gets injected directly into Claude's conversation — this is what lets Claude read and act on the review.
 
-```markdown
----
-task: fix-auth
-agent: codex
-model: openai/gpt-5.4
-timestamp: 2026-03-22T10:32:00Z
----
+When Codex adds support for feeding hook output back to the agent, redline will support it as the main agent too.
 
-## Review of fix-auth
+## What gets reviewed
 
-The authentication changes look correct overall. Two issues found:
-
-1. **Bug**: Missing null check on `user.session` at line 42
-2. **Suggestion**: Consider using httpOnly cookies for token storage
-```
-
-After writing a task, the main agent polls `.vigil/reviews/` for up to 3 minutes. If a review appears, it reads the feedback and asks you whether to address it. You can skip the wait at any time.
-
-## Single-agent mode
-
-If only one agent is installed, vigil still works — it just runs without background reviews. You'll see a warning:
-
-```
-warn 'codex' not found — running without background reviews.
-```
-
-## How instruction injection works
-
-Vigil needs to teach the main agent about the `.vigil/` protocol. It does this transparently:
-
-- **Claude Code**: Uses `--append-system-prompt` to inject protocol instructions (no filesystem side-effects)
-- **Codex CLI**: Appends a marked block to `AGENTS.md` at the repo root (Codex auto-discovers this file). The block is wrapped in `<!-- vigil:begin -->` / `<!-- vigil:end -->` markers so it can be cleanly removed on exit. If `AGENTS.md` already exists, the original content is preserved and restored.
-
-## Configuration
-
-Stored at `~/.config/vigil/config.json` with restricted permissions (0600).
-
-| Key | Description |
-|-----|-------------|
-| `openrouter_api_key` | Your OpenRouter API key |
-| `user_id` | OpenRouter user ID (set by OAuth) |
+Redline uses `codex exec review --uncommitted`, which reviews all staged, unstaged, and untracked changes in the repo. This means every time Claude finishes working, Codex reviews everything that's changed.
 
 ## Requirements
 
 - [Bun](https://bun.sh) runtime
-- At least one of: `claude` (Claude Code), `codex` (Codex CLI)
-- Both agents for cross-review functionality
-- An [OpenRouter](https://openrouter.ai) account (free to sign up, pay-per-use)
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (main agent)
+- [Codex CLI](https://github.com/openai/codex) (reviewer)
+- [OpenRouter](https://openrouter.ai) account (free to sign up, pay-per-use)
 
 ## License
 

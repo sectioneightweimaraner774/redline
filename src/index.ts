@@ -1,43 +1,31 @@
 #!/usr/bin/env bun
 
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import { loadConfig } from "./lib/config-store";
 import { login } from "./lib/auth";
-import { ensureCodexConfig } from "./lib/env";
-import { AGENTS, isAgentName, isAgentInstalled, type AgentName } from "./lib/agents";
-import {
-  ensureVigilDirs,
-  ensureVigilIgnored,
-  readWatcherPid,
-  cleanupWatcherPid,
-  isProcessAlive,
-  generateProtocolInstructions,
-  injectAgentsMd,
-  restoreAgentsMd,
-} from "./lib/protocol";
-import { log, bold } from "./lib/prompts";
+import { log, bold, green, dim, cyan } from "./lib/prompts";
+import { findProjectRoot, installHook, removeHook } from "./lib/hooks";
 
-const VERSION = "0.2.0";
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const VERSION = "0.3.0";
 
 const HELP = `
-${bold("vigil")} — background cross-review for AI coding agents
+${bold("redline")} — automatic code review for Claude Code via Codex
 
 ${bold("Usage:")}
-  vigil claude [args...]    Run Claude Code with background Codex review
-  vigil codex [args...]     Run Codex CLI with background Claude review
-  vigil login               Authenticate with OpenRouter via OAuth
-  vigil config [args...]    Show/set configuration
+  redline [model]                Enable Codex reviews (default: openai/gpt-5.4)
+  redline off                    Disable reviews (remove hook)
+  redline review [model]         Run a single review manually
+  redline review [model] --hook  Run review, output as Claude Code hook JSON
+  redline login                  Authenticate with OpenRouter
+  redline config [args...]       Show/set configuration
 
 ${bold("Options:")}
   --help, -h     Show this help
   --version      Show version
 
 ${bold("Examples:")}
-  vigil claude --dangerously-skip-permissions
-  vigil claude -p "one-shot task"
-  vigil codex --full-auto
+  redline                        # enable with default model
+  redline openai/gpt-5.4-pro     # enable with custom model
+  redline off                    # disable
 `;
 
 async function resolveApiKey(): Promise<string> {
@@ -52,150 +40,85 @@ async function resolveApiKey(): Promise<string> {
   return key;
 }
 
-// --- Cleanup state ---
-let watcherProc: ReturnType<typeof Bun.spawn> | null = null;
-let agentsMdOriginal: string | null | undefined = undefined; // undefined = not touched
-let repoRoot: string = process.cwd();
+async function enableReviews(model?: string): Promise<void> {
+  await resolveApiKey(); // ensure we have a key before installing
 
-async function cleanup() {
-  if (watcherProc) {
-    try {
-      watcherProc.kill("SIGTERM");
-    } catch {
-      // already dead
-    }
-    watcherProc = null;
-  }
-  await cleanupWatcherPid(repoRoot);
-
-  if (agentsMdOriginal !== undefined) {
-    await restoreAgentsMd(repoRoot, agentsMdOriginal);
-    agentsMdOriginal = undefined;
-  }
-}
-
-async function runAgent(agentName: AgentName, userArgs: string[]): Promise<never> {
-  repoRoot = process.cwd();
-  const agent = AGENTS[agentName];
-  const opposite = AGENTS[agent.opposite];
-
-  // Resolve API key
-  const apiKey = await resolveApiKey();
-
-  // Check main agent is installed
-  if (!isAgentInstalled(agentName)) {
-    log.error(`'${agentName}' is not installed or not on PATH.`);
+  const root = findProjectRoot();
+  if (!root) {
+    log.error("Not inside a git repository.");
     process.exit(1);
   }
 
-  // Check opposite agent
-  const hasOpposite = isAgentInstalled(agent.opposite);
-  if (!hasOpposite) {
-    log.warn(
-      `'${agent.opposite}' not found — running without background reviews.`,
-    );
-  }
+  const { installed, updated } = await installHook(root, model);
 
-  // Ensure codex config if codex is involved (as main or reviewer)
-  if (agentName === "codex" || agent.opposite === "codex") {
-    await ensureCodexConfig();
-  }
-
-  // Set up .vigil/ directories
-  await ensureVigilDirs(repoRoot);
-  await ensureVigilIgnored(repoRoot);
-
-  // Spawn background watcher (if opposite agent available)
-  if (hasOpposite) {
-    // Check if a watcher is already running
-    const existingPid = readWatcherPid(repoRoot);
-    if (existingPid && isProcessAlive(existingPid)) {
-      log.info("Vigil watcher already running.");
-    } else {
-      const watcherPath = resolve(__dirname, "watcher.ts");
-      watcherProc = Bun.spawn(
-        [
-          "bun",
-          watcherPath,
-          "--review-agent", agent.opposite,
-          "--api-key", apiKey,
-          "--vigil-dir", resolve(repoRoot, ".vigil"),
-          "--repo-root", repoRoot,
-        ],
-        {
-          stdout: "ignore",
-          stderr: "ignore",
-        },
-      );
-      log.info(
-        `Background reviewer started (${opposite.displayName}, PID ${watcherProc.pid})`,
-      );
-    }
-  }
-
-  // Inject protocol instructions
-  const instructions = generateProtocolInstructions(agentName, agent.defaultModel);
-  let agentArgs: string[];
-
-  if (agentName === "claude") {
-    // Prepend --append-system-prompt to user's args
-    agentArgs = ["claude", "--append-system-prompt", instructions, ...userArgs];
+  const displayModel = model || "openai/gpt-5.4";
+  if (!installed && !updated) {
+    log.info(`Redline hook already installed (${displayModel}).`);
+  } else if (updated) {
+    log.success(`Redline hook updated → ${cyan(displayModel)}`);
   } else {
-    // Write AGENTS.md with vigil instructions for Codex
-    agentsMdOriginal = await injectAgentsMd(repoRoot, instructions);
-    agentArgs = ["codex", ...userArgs];
+    log.success(`Redline hook installed → ${cyan(displayModel)}`);
   }
 
-  // Build environment
-  const env = { ...process.env, ...agent.getEnv(apiKey) };
+  console.log();
+  console.log(`  ${dim("Location:")} .claude/settings.local.json`);
+  console.log(`  ${dim("Trigger:")}  Claude Code Stop event`);
+  console.log(`  ${dim("Action:")}   codex exec review --uncommitted`);
+  console.log();
+  console.log(`  Run ${green("redline off")} to disable.`);
+}
 
-  // Register cleanup handlers
-  process.on("SIGINT", async () => {
-    await cleanup();
-    process.exit(130);
-  });
-  process.on("SIGTERM", async () => {
-    await cleanup();
-    process.exit(143);
-  });
+async function disableReviews(): Promise<void> {
+  const root = findProjectRoot();
+  if (!root) {
+    log.error("Not inside a git repository.");
+    process.exit(1);
+  }
 
-  // Spawn main agent with inherited stdio (user interacts directly)
-  log.info(`Starting ${agent.displayName}...`);
-  const agentProc = Bun.spawn(agentArgs, {
-    stdin: "inherit",
-    stdout: "inherit",
-    stderr: "inherit",
-    env,
-  });
-
-  const exitCode = await agentProc.exited;
-
-  // Cleanup
-  await cleanup();
-  process.exit(exitCode);
+  const removed = await removeHook(root);
+  if (removed) {
+    log.success("Redline hook removed.");
+  } else {
+    log.info("No redline hook found.");
+  }
 }
 
 async function main() {
   const args = Bun.argv.slice(2);
 
-  if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
+  if (args.length === 0) {
+    await enableReviews();
+    return;
+  }
+
+  if (args[0] === "--help" || args[0] === "-h") {
     console.log(HELP);
-    process.exit(0);
+    return;
   }
 
   if (args[0] === "--version") {
-    console.log(`vigil v${VERSION}`);
-    process.exit(0);
+    console.log(`redline v${VERSION}`);
+    return;
   }
 
-  const command = args[0];
+  switch (args[0]) {
+    case "off": {
+      await disableReviews();
+      break;
+    }
 
-  if (isAgentName(command)) {
-    await runAgent(command, args.slice(1));
-    return; // unreachable — runAgent calls process.exit
-  }
+    case "review": {
+      const apiKey = await resolveApiKey();
+      // Parse: redline review [model] [--hook]
+      const hasHook = args.includes("--hook");
+      const reviewArgs = args.slice(1).filter((a) => a !== "--hook");
+      const model = reviewArgs[0]; // optional model
 
-  switch (command) {
+      const { reviewCommand } = await import("./commands/review");
+      await reviewCommand({ model, hook: hasHook, apiKey });
+      break;
+    }
+
     case "login": {
       const { loginCommand } = await import("./commands/login");
       await loginCommand();
@@ -208,10 +131,11 @@ async function main() {
       break;
     }
 
-    default:
-      log.error(`Unknown command: ${command}`);
-      console.log(HELP);
-      process.exit(1);
+    default: {
+      // Treat as model slug → install hook with that model
+      await enableReviews(args[0]);
+      break;
+    }
   }
 }
 
