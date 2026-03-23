@@ -3,6 +3,11 @@ import { existsSync, mkdirSync } from "node:fs";
 
 const REDLINE_MARKER = "redline check";
 
+/** Match any redline hook command (current or legacy). */
+function isRedlineHook(command: string): boolean {
+  return command.startsWith("redline check") || command.startsWith("redline review");
+}
+
 /** Walk up from cwd to find the git repo root. */
 export function findProjectRoot(from: string = process.cwd()): string | null {
   let dir = from;
@@ -69,7 +74,7 @@ export async function installHook(
   // Check if we already have a redline hook
   for (const group of settings.hooks.Stop) {
     for (let i = 0; i < group.hooks.length; i++) {
-      if (group.hooks[i].command.startsWith(REDLINE_MARKER)) {
+      if (isRedlineHook(group.hooks[i].command)) {
         if (group.hooks[i].command === command) {
           return { installed: false, updated: false }; // already identical
         }
@@ -112,7 +117,7 @@ export async function removeHook(
     .map((group) => ({
       ...group,
       hooks: group.hooks.filter((h) => {
-        if (h.command.startsWith(REDLINE_MARKER)) {
+        if (isRedlineHook(h.command)) {
           removed = true;
           return false;
         }
