@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { existsSync, mkdirSync } from "node:fs";
 
-const REDLINE_MARKER = "redline review";
+const REDLINE_MARKER = "redline check";
 
 /** Walk up from cwd to find the git repo root. */
 export function findProjectRoot(from: string = process.cwd()): string | null {
@@ -60,7 +60,6 @@ export async function installHook(
   // Build the command
   const parts = [REDLINE_MARKER];
   if (model) parts.push(model);
-  parts.push("--hook");
   const command = parts.join(" ");
 
   // Ensure hooks.Stop exists
@@ -88,7 +87,7 @@ export async function installHook(
       {
         type: "command",
         command,
-        timeout: 300,
+        timeout: 10,
       },
     ],
   });

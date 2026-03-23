@@ -2,25 +2,24 @@
 
 Automatic code review for Claude Code, powered by Codex via OpenRouter.
 
-Run `redline` in any git repo to install a Claude Code hook. Every time Claude finishes a response, Codex automatically reviews uncommitted changes and feeds the results back into Claude's context.
+Run `redline` in any git repo to install a Claude Code hook. When Claude makes code changes, Codex automatically reviews them in the background — visible, killable, and async.
 
 ## How it works
 
 ```
-You're working in Claude Code as normal:
-
-  claude --dangerously-skip-permissions
-
-Behind the scenes, a Stop hook fires after each Claude response:
-
-  Claude Code Stop event
-    → redline review --hook
-    → codex exec review --uncommitted
-    → review fed back to Claude as hook output
-    → Claude reads the review and tells you about any issues
+Claude Code Stop hook (fast, <1s)
+  → redline check
+  → any uncommitted changes? review already pending?
+  → if changes detected:
+      tells Claude to run `redline review` as a background task
+      Claude spawns it → visible in background tasks, killable
+      Codex reviews uncommitted changes
+      Claude reads the results and presents findings
+  → if no changes or review pending:
+      exits silently, Claude proceeds normally
 ```
 
-Redline installs a single hook in `.claude/settings.local.json`. It's stateless — no background processes, no watchers, no extra directories.
+Reviews are **async** — Claude keeps working while Codex reviews in the background. No blocking, no waiting.
 
 ## Setup
 
@@ -50,7 +49,7 @@ export OPENROUTER_API_KEY=sk-or-...
 ```bash
 cd your-project
 redline              # installs the hook, done
-# now use Claude Code normally — reviews happen automatically
+# now use Claude Code normally — reviews happen automatically in the background
 ```
 
 ## Commands
@@ -60,14 +59,17 @@ redline              # installs the hook, done
 | `redline` | Enable reviews with the default model (`openai/gpt-5.4`) |
 | `redline <model>` | Enable reviews with a custom model (any OpenRouter slug) |
 | `redline off` | Disable reviews (remove the hook) |
-| `redline review [model]` | Run a single review manually, print to stdout |
-| `redline review [model] --hook` | Run a review and output Claude Code hook JSON |
+| `redline review [model]` | Run a single review manually |
 | `redline login` | Authenticate with OpenRouter via OAuth |
 | `redline config` | Show current configuration |
 | `redline config set <key> <value>` | Set a config value |
 | `redline config reset` | Reset config to defaults |
-| `redline --help` | Show help |
-| `redline --version` | Show version |
+
+### Internal commands (called by hook, not by users)
+
+| Command | Description |
+|---------|-------------|
+| `redline check [model]` | Fast diff gate — checks for uncommitted changes, outputs hook JSON |
 
 ### Model customization
 
@@ -75,19 +77,24 @@ The default review model is `openai/gpt-5.4`. Pass any [OpenRouter model slug](h
 
 ```bash
 redline openai/gpt-5.4-pro       # use GPT-5.4 Pro
-redline anthropic/claude-opus-4.6 # use Claude Opus (reviewing its own code)
 redline google/gemini-2.5-pro     # use Gemini
 ```
 
 ## Why Claude Code only?
 
-Codex CLI's hook system can't feed output back into the agent's context. Claude Code's `Stop` hook supports a `decision: "block"` response with a `reason` field that gets injected directly into Claude's conversation — this is what lets Claude read and act on the review.
+Codex CLI's hook system can't feed output back into the agent's context. Claude Code's `Stop` hook supports a `decision: "block"` response with a `reason` field that gets injected directly into Claude's conversation — this is what lets Claude read the review instructions and spawn the background task.
 
 When Codex adds support for feeding hook output back to the agent, redline will support it as the main agent too.
 
-## What gets reviewed
+## How the async review works
 
-Redline uses `codex exec review --uncommitted`, which reviews all staged, unstaged, and untracked changes in the repo. This means every time Claude finishes working, Codex reviews everything that's changed.
+1. Claude finishes a response → Stop hook fires `redline check`
+2. `redline check` runs `git status --porcelain` (<1s) and checks for a pending review marker
+3. If changes exist and no review is pending, it tells Claude to run `redline review` in the background
+4. Claude spawns `redline review` as a background task (visible in Claude's task list, killable)
+5. Codex reviews all uncommitted changes via `codex exec review --uncommitted`
+6. When done, Claude reads the output and presents findings to the user
+7. The pending marker is cleared, so the next Stop event can trigger a new review if needed
 
 ## Requirements
 

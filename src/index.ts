@@ -11,21 +11,20 @@ const HELP = `
 ${bold("redline")} — automatic code review for Claude Code via Codex
 
 ${bold("Usage:")}
-  redline [model]                Enable Codex reviews (default: openai/gpt-5.4)
-  redline off                    Disable reviews (remove hook)
-  redline review [model]         Run a single review manually
-  redline review [model] --hook  Run review, output as Claude Code hook JSON
-  redline login                  Authenticate with OpenRouter
-  redline config [args...]       Show/set configuration
+  redline [model]             Enable Codex reviews (default: openai/gpt-5.4)
+  redline off                 Disable reviews (remove hook)
+  redline review [model]      Run a single review manually
+  redline login               Authenticate with OpenRouter
+  redline config [args...]    Show/set configuration
 
 ${bold("Options:")}
   --help, -h     Show this help
   --version      Show version
 
 ${bold("Examples:")}
-  redline                        # enable with default model
-  redline openai/gpt-5.4-pro     # enable with custom model
-  redline off                    # disable
+  redline                     # enable with default model
+  redline openai/gpt-5.4-pro  # enable with custom model
+  redline off                 # disable
 `;
 
 async function resolveApiKey(): Promise<string> {
@@ -41,7 +40,7 @@ async function resolveApiKey(): Promise<string> {
 }
 
 async function enableReviews(model?: string): Promise<void> {
-  await resolveApiKey(); // ensure we have a key before installing
+  await resolveApiKey();
 
   const root = findProjectRoot();
   if (!root) {
@@ -63,7 +62,7 @@ async function enableReviews(model?: string): Promise<void> {
   console.log();
   console.log(`  ${dim("Location:")} .claude/settings.local.json`);
   console.log(`  ${dim("Trigger:")}  Claude Code Stop event`);
-  console.log(`  ${dim("Action:")}   codex exec review --uncommitted`);
+  console.log(`  ${dim("Action:")}   Async background codex review when changes detected`);
   console.log();
   console.log(`  Run ${green("redline off")} to disable.`);
 }
@@ -107,15 +106,18 @@ async function main() {
       break;
     }
 
+    case "check": {
+      // Called by the Stop hook — fast diff gate
+      const { checkCommand } = await import("./commands/check");
+      checkCommand(args[1]); // optional model
+      break;
+    }
+
     case "review": {
       const apiKey = await resolveApiKey();
-      // Parse: redline review [model] [--hook]
-      const hasHook = args.includes("--hook");
-      const reviewArgs = args.slice(1).filter((a) => a !== "--hook");
-      const model = reviewArgs[0]; // optional model
-
+      const model = args[1]; // optional model
       const { reviewCommand } = await import("./commands/review");
-      await reviewCommand({ model, hook: hasHook, apiKey });
+      await reviewCommand({ model, apiKey });
       break;
     }
 
@@ -132,7 +134,7 @@ async function main() {
     }
 
     default: {
-      // Treat as model slug → install hook with that model
+      // Treat as model slug → install hook
       await enableReviews(args[0]);
       break;
     }
