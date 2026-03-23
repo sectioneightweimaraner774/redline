@@ -15,7 +15,6 @@ ${bold("Usage:")}
   redline off                 Disable reviews (remove hook)
   redline review [model]      Run a single review manually
   redline login               Authenticate with OpenRouter
-  redline config [args...]    Show/set configuration
 
 ${bold("Options:")}
   --help, -h     Show this help
@@ -124,12 +123,6 @@ async function main() {
     case "login": {
       const { loginCommand } = await import("./commands/login");
       await loginCommand();
-      break;
-    }
-
-    case "config": {
-      const { configCommand } = await import("./commands/config");
-      await configCommand(args.slice(1));
       break;
     }
 

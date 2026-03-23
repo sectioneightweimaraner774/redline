@@ -4,8 +4,6 @@ import { join } from "node:path";
 export interface Config {
   openrouter_api_key?: string;
   user_id?: string;
-  default_coding_agent?: string;
-  default_review_agent?: string;
 }
 
 const CONFIG_DIR = join(homedir(), ".config", "redline");

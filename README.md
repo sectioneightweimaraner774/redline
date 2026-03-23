@@ -61,9 +61,6 @@ redline              # installs the hook, done
 | `redline off` | Disable reviews (remove the hook) |
 | `redline review [model]` | Run a single review manually |
 | `redline login` | Authenticate with OpenRouter via OAuth |
-| `redline config` | Show current configuration |
-| `redline config set <key> <value>` | Set a config value |
-| `redline config reset` | Reset config to defaults |
 
 ### Internal commands (called by hook, not by users)
 
