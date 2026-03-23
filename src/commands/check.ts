@@ -1,47 +1,30 @@
-import { join } from "node:path";
-import { existsSync, writeFileSync } from "node:fs";
-import { findProjectRoot } from "../lib/hooks";
-
-const PENDING_FILE = "redline-pending";
-
-function getPendingPath(): string | null {
-  const root = findProjectRoot();
-  if (!root) return null;
-  return join(root, ".git", PENDING_FILE);
-}
-
-function hasUncommittedChanges(): boolean {
-  const result = Bun.spawnSync(["git", "status", "--porcelain"], {
+function getDiffStat(): string {
+  const result = Bun.spawnSync(["git", "diff", "--stat", "HEAD"], {
     stdout: "pipe",
     stderr: "pipe",
   });
-  return result.exitCode === 0 && result.stdout.toString().trim().length > 0;
+  const stat = result.stdout.toString().trim();
+  if (stat) return stat;
+
+  // Fall back to status for untracked files
+  const status = Bun.spawnSync(["git", "status", "--porcelain"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  return status.stdout.toString().trim();
 }
 
 export function checkCommand(model?: string): void {
-  // Gate 1: any uncommitted changes?
-  if (!hasUncommittedChanges()) {
+  const diffStat = getDiffStat();
+  if (!diffStat) {
     process.exit(0);
   }
 
-  // Gate 2: review already pending?
-  const pendingPath = getPendingPath();
-  if (pendingPath && existsSync(pendingPath)) {
-    process.exit(0);
-  }
-
-  // Mark review as pending
-  if (pendingPath) {
-    writeFileSync(pendingPath, new Date().toISOString());
-  }
-
-  // Build the review command
   const reviewCmd = model ? `redline review ${model}` : "redline review";
 
-  // Output hook JSON instructing Claude to run background review
   const hookOutput = {
     decision: "block",
-    reason: `Uncommitted code changes detected. Please run the following command as a background task to get a Codex code review:\n\n${reviewCmd}\n\nContinue working — you can monitor the review in your background tasks. When it completes, assess the findings and inform the user of any issues.`,
+    reason: `Redline: Here is a summary of uncommitted changes since the last review:\n\n${diffStat}\n\nIf these changes are substantial enough to warrant a code review (e.g., new logic, bug fixes, refactors — not just formatting or comments), run the following command as a background task:\n\n${reviewCmd}\n\nIf the changes are trivial, or a review is already running, skip it. When a review completes, assess the findings and inform the user of any issues.`,
   };
 
   console.log(JSON.stringify(hookOutput));
