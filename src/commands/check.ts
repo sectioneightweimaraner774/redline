@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { findProjectRoot } from "../lib/hooks";
+import { buildReviewCommand } from "../lib/agents";
 
 function getDiffStat(): string {
   const result = Bun.spawnSync(["git", "diff", "--stat", "HEAD"], {
@@ -27,7 +28,7 @@ function hash(s: string): string {
   return h.toString(36);
 }
 
-export function checkCommand(model?: string): void {
+export function checkCommand(model?: string, effort?: string): void {
   const diffStat = getDiffStat();
   if (!diffStat) {
     process.exit(0);
@@ -41,25 +42,15 @@ export function checkCommand(model?: string): void {
   if (hashFile && existsSync(hashFile)) {
     const lastHash = readFileSync(hashFile, "utf-8").trim();
     if (lastHash === currentHash) {
-      process.exit(0); // same diff as last check — skip
+      process.exit(0);
     }
   }
 
-  // Save current hash
   if (hashFile) {
     writeFileSync(hashFile, currentHash);
   }
 
-  // Build the actual codex command for transparency
-  const codexArgs = [
-    "codex", "exec", "review",
-    "-c", "'model_provider=\"openrouter\"'",
-    "--uncommitted",
-  ];
-  if (model) {
-    codexArgs.push("-c", `'model="${model}"'`);
-  }
-  const codexCmd = codexArgs.join(" ");
+  const codexCmd = buildReviewCommand(model, effort);
 
   const hookOutput = {
     decision: "block",

@@ -49,6 +49,33 @@ export function confirm(prompt: string, defaultYes = true): Promise<boolean> {
   });
 }
 
+/**
+ * Numbered choice prompt. Returns the selected index.
+ * Example: choose("Effort", ["low", "medium", "high"], 2)
+ * Displays: Effort [1] low [2] medium [3] high (3):
+ */
+export function choose(
+  prompt: string,
+  options: string[],
+  defaultIdx: number,
+): Promise<number> {
+  const rl = createRL();
+  const optStr = options
+    .map((o, i) => `${dim("[")}${bold(String(i + 1))}${dim("]")} ${o}`)
+    .join(" ");
+  const defDisplay = dim(` (${defaultIdx + 1})`);
+  return new Promise((resolve) => {
+    rl.question(`${bold(prompt)} ${optStr}${defDisplay} `, (answer) => {
+      rl.close();
+      const a = answer.trim();
+      if (a === "") return resolve(defaultIdx);
+      const n = parseInt(a, 10);
+      if (n >= 1 && n <= options.length) return resolve(n - 1);
+      resolve(defaultIdx);
+    });
+  });
+}
+
 export function askMultiline(prompt: string): Promise<string> {
   const rl = createRL();
   console.log(bold(prompt) + dim(" (enter empty line to finish)"));

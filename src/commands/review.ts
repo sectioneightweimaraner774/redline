@@ -7,11 +7,12 @@ import { log } from "../lib/prompts";
 
 interface ReviewOptions {
   model?: string;
+  effort?: string;
   apiKey: string;
 }
 
 export async function reviewCommand(opts: ReviewOptions): Promise<void> {
-  const { apiKey, model } = opts;
+  const { apiKey, model, effort } = opts;
 
   if (!isCodexInstalled()) {
     log.error("codex CLI is not installed or not on PATH.");
@@ -21,7 +22,7 @@ export async function reviewCommand(opts: ReviewOptions): Promise<void> {
   await ensureCodexConfig();
 
   const outputFile = join(tmpdir(), `redline-review-${Date.now()}.txt`);
-  const args = buildReviewArgs(outputFile, model);
+  const args = buildReviewArgs(outputFile, model, effort);
   const env = { ...process.env, ...getCodexEnv(apiKey) };
 
   // Stream codex output in real-time so background task shows progress

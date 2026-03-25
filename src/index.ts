@@ -2,8 +2,13 @@
 
 import { loadConfig } from "./lib/config-store";
 import { login } from "./lib/auth";
-import { log, bold, green, dim, cyan } from "./lib/prompts";
+import { log, bold, green, dim, cyan, ask, choose } from "./lib/prompts";
 import { findProjectRoot, installHook, removeHook } from "./lib/hooks";
+import {
+  DEFAULT_MODEL, DEFAULT_EFFORT, EFFORT_OPTIONS, VARIANT_OPTIONS,
+  DEFAULT_VARIANT_IDX, applyVariant,
+  type Effort, type Variant,
+} from "./lib/agents";
 
 const VERSION = "0.3.0";
 
@@ -11,18 +16,19 @@ const HELP = `
 ${bold("redline")} — automatic code review for Claude Code via Codex
 
 ${bold("Usage:")}
-  redline [model]             Enable Codex reviews (default: openai/gpt-5.4)
+  redline [model]             Enable Codex reviews (interactive setup)
   redline off                 Disable reviews (remove hook)
   redline review [model]      Run a single review manually
   redline login               Authenticate with OpenRouter
 
 ${bold("Options:")}
-  --help, -h     Show this help
-  --version      Show version
+  --effort=<level>   Reasoning effort (minimal, low, medium, high)
+  --help, -h         Show this help
+  --version          Show version
 
 ${bold("Examples:")}
-  redline                     # enable with default model
-  redline openai/gpt-5.4-pro  # enable with custom model
+  redline                     # interactive setup
+  redline openai/gpt-5.4-pro  # skip model prompt, still prompts for effort/variant
   redline off                 # disable
 `;
 
@@ -38,7 +44,21 @@ async function resolveApiKey(): Promise<string> {
   return key;
 }
 
-async function enableReviews(model?: string): Promise<void> {
+/** Parse --effort=X and --key=value flags from args. */
+function parseFlags(args: string[]): { effort?: string; rest: string[] } {
+  let effort: string | undefined;
+  const rest: string[] = [];
+  for (const arg of args) {
+    if (arg.startsWith("--effort=")) {
+      effort = arg.split("=")[1];
+    } else {
+      rest.push(arg);
+    }
+  }
+  return { effort, rest };
+}
+
+async function enableReviews(modelArg?: string, effortArg?: string): Promise<void> {
   await resolveApiKey();
 
   const root = findProjectRoot();
@@ -47,15 +67,46 @@ async function enableReviews(model?: string): Promise<void> {
     process.exit(1);
   }
 
-  const { installed, updated } = await installHook(root, model);
+  console.log();
 
-  const displayModel = model || "openai/gpt-5.4";
-  if (!installed && !updated) {
-    log.info(`Redline hook already installed (${displayModel}).`);
-  } else if (updated) {
-    log.success(`Redline hook updated → ${cyan(displayModel)}`);
+  // Prompt for model (skip if provided as arg)
+  const model = modelArg || await ask("  Model", DEFAULT_MODEL);
+
+  // Prompt for reasoning effort (skip if provided via --effort flag)
+  let effort: string;
+  if (effortArg && EFFORT_OPTIONS.includes(effortArg as Effort)) {
+    effort = effortArg;
   } else {
-    log.success(`Redline hook installed → ${cyan(displayModel)}`);
+    const effortIdx = await choose(
+      "  Reasoning effort",
+      [...EFFORT_OPTIONS],
+      EFFORT_OPTIONS.indexOf(DEFAULT_EFFORT),
+    );
+    effort = EFFORT_OPTIONS[effortIdx];
+  }
+
+  // Prompt for provider variant
+  const variantIdx = await choose(
+    "  Provider",
+    [...VARIANT_OPTIONS],
+    DEFAULT_VARIANT_IDX,
+  );
+  const variant = VARIANT_OPTIONS[variantIdx] as Variant;
+
+  // Build final model slug with variant
+  const finalModel = applyVariant(model, variant);
+
+  console.log();
+
+  const { installed, updated } = await installHook(root, finalModel, effort);
+
+  const display = `${cyan(finalModel)} ${dim(`(${effort} effort)`)}`;
+  if (!installed && !updated) {
+    log.info(`Redline hook already installed → ${display}`);
+  } else if (updated) {
+    log.success(`Redline hook updated → ${display}`);
+  } else {
+    log.success(`Redline hook installed → ${display}`);
   }
 
   console.log();
@@ -82,41 +133,50 @@ async function disableReviews(): Promise<void> {
 }
 
 async function main() {
-  const args = Bun.argv.slice(2);
+  const rawArgs = Bun.argv.slice(2);
+  const { effort, rest } = parseFlags(rawArgs);
 
-  if (args.length === 0) {
-    await enableReviews();
+  if (rest.length === 0) {
+    await enableReviews(undefined, effort);
     return;
   }
 
-  if (args[0] === "--help" || args[0] === "-h") {
+  if (rest[0] === "--help" || rest[0] === "-h") {
     console.log(HELP);
     return;
   }
 
-  if (args[0] === "--version") {
+  if (rest[0] === "--version") {
     console.log(`redline v${VERSION}`);
     return;
   }
 
-  switch (args[0]) {
+  switch (rest[0]) {
     case "off": {
       await disableReviews();
       break;
     }
 
     case "check": {
-      // Called by the Stop hook — fast diff gate
+      // Called by the Stop hook: redline check [model] [--effort=X]
       const { checkCommand } = await import("./commands/check");
-      checkCommand(args[1]); // optional model
+      // Model is the first non-flag arg after "check"
+      const checkArgs = rest.slice(1);
+      const { effort: checkEffort, rest: checkRest } = parseFlags(checkArgs);
+      checkCommand(checkRest[0], checkEffort || effort);
       break;
     }
 
     case "review": {
       const apiKey = await resolveApiKey();
-      const model = args[1]; // optional model
+      const reviewArgs = rest.slice(1);
+      const { effort: reviewEffort, rest: reviewRest } = parseFlags(reviewArgs);
       const { reviewCommand } = await import("./commands/review");
-      await reviewCommand({ model, apiKey });
+      await reviewCommand({
+        model: reviewRest[0],
+        effort: reviewEffort || effort,
+        apiKey,
+      });
       break;
     }
 
@@ -127,8 +187,8 @@ async function main() {
     }
 
     default: {
-      // Treat as model slug → install hook
-      await enableReviews(args[0]);
+      // Treat as model slug → install hook with prompts for effort/variant
+      await enableReviews(rest[0], effort);
       break;
     }
   }

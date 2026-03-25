@@ -52,34 +52,41 @@ export OPENROUTER_API_KEY=sk-or-...
 
 ```bash
 cd your-project
-redline              # installs the hook, done
-# now use Claude Code normally — reviews happen automatically in the background
+redline
 ```
+
+Redline will prompt you to configure the review:
+
+```
+  Model (openai/gpt-5.4):
+  Reasoning effort [1] minimal [2] low [3] medium [4] high (4):
+  Provider [1] nitro [2] floor [3] standard (1):
+
+ok   Redline hook installed → openai/gpt-5.4:nitro (high effort)
+```
+
+That's it — use Claude Code normally and reviews happen automatically in the background.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `redline` | Enable reviews with the default model (`openai/gpt-5.4`) |
-| `redline <model>` | Enable reviews with a custom model (any OpenRouter slug) |
+| `redline` | Enable reviews (interactive setup) |
+| `redline <model>` | Enable with a specific model (still prompts for effort/variant) |
 | `redline off` | Disable reviews (remove the hook) |
 | `redline review [model]` | Run a single review manually |
 | `redline login` | Authenticate with OpenRouter via OAuth |
 
-### Internal commands (called by hook, not by users)
+### Configuration options
 
-| Command | Description |
-|---------|-------------|
-| `redline check [model]` | Fast diff gate — checks for uncommitted changes, outputs hook JSON |
+**Model** — any [OpenRouter model slug](https://openrouter.ai/models). Default: `openai/gpt-5.4`.
 
-### Model customization
+**Reasoning effort** — how much the model "thinks" before responding. `minimal`, `low`, `medium`, or `high` (default). Lower effort = faster reviews, higher effort = more thorough.
 
-The default review model is `openai/gpt-5.4`. Pass any [OpenRouter model slug](https://openrouter.ai/models) to customize:
-
-```bash
-redline openai/gpt-5.4-pro       # use GPT-5.4 Pro
-redline google/gemini-2.5-pro     # use Gemini
-```
+**Provider variant** — OpenRouter's [provider sorting](https://openrouter.ai/docs/features/model-routing):
+- **nitro** (default) — fastest provider (highest throughput)
+- **floor** — cheapest provider (lowest price)
+- **standard** — default OpenRouter routing
 
 ## Why Claude Code only?
 

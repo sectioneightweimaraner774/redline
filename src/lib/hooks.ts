@@ -58,13 +58,15 @@ async function writeSettings(path: string, settings: Settings): Promise<void> {
 export async function installHook(
   projectRoot: string,
   model?: string,
+  effort?: string,
 ): Promise<{ installed: boolean; updated: boolean }> {
   const path = settingsPath(projectRoot);
   const settings = await readSettings(path);
 
-  // Build the command
+  // Build the command: redline check [model] [--effort=X]
   const parts = [REDLINE_MARKER];
   if (model) parts.push(model);
+  if (effort) parts.push(`--effort=${effort}`);
   const command = parts.join(" ");
 
   // Ensure hooks.Stop exists
