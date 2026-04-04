@@ -1,0 +1,16 @@
+{
+  "description": "Redline Stop hook — the model decides whether to review, challenge, or rescue",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/check.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

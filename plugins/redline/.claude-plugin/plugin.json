@@ -1,0 +1,11 @@
+{
+  "name": "redline",
+  "version": "1.0.0",
+  "description": "Automatic code review, adversarial review, and rescue via Codex through OpenRouter.",
+  "author": { "name": "Alex Atallah" },
+  "userConfig": {
+    "openrouter_api_key": { "description": "OpenRouter API key (or set OPENROUTER_API_KEY env var)", "sensitive": true },
+    "model": { "description": "Review model (default: openai/gpt-5.4)", "sensitive": false },
+    "effort": { "description": "Reasoning effort: minimal, low, medium, high (default: high)", "sensitive": false }
+  }
+}
