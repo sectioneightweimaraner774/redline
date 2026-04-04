@@ -4,29 +4,33 @@
 
 # redline
 
-A Claude Code plugin for automatic code review, adversarial review, and rescue delegation — powered by Codex.
+A Claude Code plugin for **automatic** code review, adversarial review, and rescue delegation — powered by Codex through any model on [OpenRouter](https://openrouter.ai).
+
+Use GPT, Claude, Gemini, DeepSeek, or any other model for reviews — not locked to a single provider.
 
 ## The model decides
 
-Redline's key principle: **Claude decides what help it needs.** After each response, a Stop hook presents Claude with a summary of uncommitted changes and three options:
+Redline's key principle: **Claude decides what help it needs.** After each response, a lightweight Stop hook asks whether code changes were made. If so, Claude evaluates the context and picks the most helpful action:
 
 - `/redline:review` — standard code review
 - `/redline:adversarial` — challenge design decisions, probe hidden assumptions, test failure modes
 - `/redline:rescue` — delegate a task to Codex as a smart friend
 
-Claude evaluates the context — what it just did, how complex the changes are, whether a review is already running — and picks the most helpful action, or skips if nothing is needed. No hardcoded triggers, no diff thresholds. The model is in the best position to decide.
+No hardcoded triggers, no diff thresholds. The model is in the best position to decide.
 
 ## How it works
 
 ```
-Claude Code Stop hook (fast, <1s)
-  → check.mjs reads git diff, deduplicates by hash
-  → if new uncommitted changes:
-      blocks with available commands listed
-      Claude picks the best action based on context
-  → if no new changes or stop_hook_active:
-      exits silently
+Claude Code Stop hook (fires after each response)
+  → reminds Claude to consider /redline:... commands
+  → Claude decides based on what it just did:
+      run a review, challenge the design, delegate to Codex, or skip
+  → suppressed when already responding to a hook (no loops)
 ```
+
+A non-user-invocable skill description stays in Claude's context at all times, providing the decision-making guidance. The hook is just a minimal nudge.
+
+Reviews happen **automatically** — no manual invocation needed. You can also run any command directly at any time.
 
 ## Install
 
@@ -46,7 +50,7 @@ claude --plugin-dir ./plugins/redline
 
 | Command | Description |
 |---------|-------------|
-| `/redline:setup` | Configure model, effort, and optionally authenticate with OpenRouter |
+| `/redline:setup` | Configure OpenRouter API key, model, effort, and routing variant |
 | `/redline:review` | Run a standard code review on uncommitted changes |
 | `/redline:adversarial` | Challenge design decisions, probe assumptions, test failure modes |
 | `/redline:rescue <task>` | Delegate a task to Codex for help when stuck |
@@ -67,9 +71,9 @@ When you're stuck — hand the problem to Codex. Describe what you're working on
 
 During `/redline:setup`, configure:
 
-- **Model** — which model Codex uses for reviews (default: `openai/gpt-5.4`)
-- **Effort** — reasoning effort: minimal, low, medium, high (default: high)
-- **Provider variant** — append `:nitro` (fastest), `:floor` (cheapest), or standard routing
+- **Model** — `openai/gpt-5.4` (default), `openrouter/auto`, or any [OpenRouter model slug](https://openrouter.ai/models)
+- **Effort** — reasoning effort: minimal, low, medium, high (default: medium)
+- **Provider variant** — `:nitro` (fastest, default), `:floor` (cheapest), or standard routing
 
 ## Authentication
 

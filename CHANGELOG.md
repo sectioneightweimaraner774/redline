@@ -7,8 +7,8 @@
 - **The model decides** — Stop hook presents available commands; Claude picks the most helpful action based on context
 - **`/redline:setup`** — interactive configuration + optional OpenRouter OAuth login
 - **No external binary** — all scripts bundled in the plugin
-- **Prompt-based Stop hook** — replaced command hook (`check.mjs`) with a lightweight prompt hook; no script execution, no diff output in the UI
-- **Persistent context via skill description** — review decision instructions moved into a non-user-invocable skill (`check.md`) whose description is always in Claude's context, eliminating repetitive hook output
+- **Minimal Stop hook** — replaced verbose `check.mjs` with a one-line command hook that just nudges Claude to consider `/redline:...` commands; `stop_hook_active` prevents loops
+- **Persistent context via skill description** — review decision instructions live in a non-user-invocable skill (`check.md`) whose description is always in Claude's context, so the hook doesn't need to repeat them
 
 ## 0.4.0
 

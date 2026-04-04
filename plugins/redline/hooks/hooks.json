@@ -5,8 +5,9 @@
       {
         "hooks": [
           {
-            "type": "prompt",
-            "prompt": "Did the assistant just make code changes? If yes: {\"ok\": false, \"reason\": \"Consider running a /redline:... command\"}. If no: {\"ok\": true}."
+            "type": "command",
+            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{if(JSON.parse(d).stop_hook_active)process.exit(0)}catch{}console.log(JSON.stringify({decision:'block',reason:'Consider /redline:... commands'}))})\"",
+            "timeout": 5
           }
         ]
       }
