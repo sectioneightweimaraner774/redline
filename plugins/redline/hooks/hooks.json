@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "Did the assistant just make code changes? If yes: {\"ok\": false, \"reason\": \"Redline\"}. If no: {\"ok\": true}."
+            "prompt": "Did the assistant just make code changes? If yes: {\"ok\": false, \"reason\": \"Consider running a /redline:... command\"}. If no: {\"ok\": true}."
           }
         ]
       }
