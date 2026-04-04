@@ -80,7 +80,7 @@ During `/redline:setup`, configure:
 
 Redline supports two authentication methods:
 
-**OpenAI subscription** — if Codex is already authenticated (`codex auth`), Redline can use it directly. No additional setup needed.
+**OpenAI subscription** — if Codex is already authenticated (`codex login`), Redline can use it directly. No additional setup needed.
 
 **OpenRouter** — route through [OpenRouter](https://openrouter.ai) for access to any model. Set your API key via:
 
@@ -117,7 +117,7 @@ Compared to other ways of reviewing Claude's code:
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 - [Codex CLI](https://github.com/openai/codex)
-- OpenAI subscription (via `codex auth`) **or** [OpenRouter](https://openrouter.ai) account
+- OpenAI subscription (via `codex login`) **or** [OpenRouter](https://openrouter.ai) account
 
 ## License
 
