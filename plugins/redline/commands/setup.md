@@ -17,8 +17,7 @@ Ask which model to use. Present EXACTLY these options — do not suggest other m
 
 1. `openai/gpt-5.4` (Recommended) — strong reasoning, good balance of speed and quality
 2. `openrouter/auto` — automatically picks the best model for the task
-3. `openrouter/free` — free models only
-4. Search OpenRouter models — if the user picks this, fetch `https://openrouter.ai/api/v1/models` via curl, ask for a search term, filter results by the `id` field, and present the top matches for them to choose from
+3. Custom — paste any OpenRouter model slug (e.g. `google/gemini-3.1-pro-preview`, `openrouter/free`). Browse available models at https://openrouter.ai/models
 
 ## Step 3: Effort
 
