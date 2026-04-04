@@ -4,7 +4,7 @@
 
 # redline
 
-A Claude Code plugin for automatic code review, adversarial review, and rescue delegation — powered by Codex via [OpenRouter](https://openrouter.ai).
+A Claude Code plugin for automatic code review, adversarial review, and rescue delegation — powered by Codex.
 
 ## The model decides
 
@@ -34,7 +34,7 @@ Claude Code Stop hook (fast, <1s)
 /plugin install redline@alexanderatallah/redline
 ```
 
-Then run `/redline:setup` to configure your OpenRouter API key, model, and effort level.
+Then run `/redline:setup` to configure your model and effort level.
 
 ### Development
 
@@ -46,7 +46,7 @@ claude --plugin-dir ./plugins/redline
 
 | Command | Description |
 |---------|-------------|
-| `/redline:setup` | Configure API key, model, effort, and provider variant |
+| `/redline:setup` | Configure model, effort, and optionally authenticate with OpenRouter |
 | `/redline:review` | Run a standard code review on uncommitted changes |
 | `/redline:adversarial` | Challenge design decisions, probe assumptions, test failure modes |
 | `/redline:rescue <task>` | Delegate a task to Codex for help when stuck |
@@ -67,32 +67,28 @@ When you're stuck — hand the problem to Codex. Describe what you're working on
 
 During `/redline:setup`, configure:
 
-- **OpenRouter API key** — via OAuth login or manual entry
-- **Model** — any [OpenRouter model slug](https://openrouter.ai/models) (default: `openai/gpt-5.4`)
+- **Model** — which model Codex uses for reviews (default: `openai/gpt-5.4`)
 - **Effort** — reasoning effort: minimal, low, medium, high (default: high)
 - **Provider variant** — append `:nitro` (fastest), `:floor` (cheapest), or standard routing
 
 ## Authentication
 
-All inference is routed through [OpenRouter](https://openrouter.ai). Set your API key via:
+Codex uses your local OpenAI credentials by default. If you'd like to route through [OpenRouter](https://openrouter.ai) instead (for access to other models or provider variants), you can:
 
 ```bash
-# Environment variable (recommended)
+# Set an OpenRouter API key in your environment
 export OPENROUTER_API_KEY=sk-or-...
 
-# Or run OAuth login
+# Or run OAuth login during setup
 /redline:setup
 ```
 
-## Why Claude Code only?
-
-Codex CLI's hook system can't feed structured output back into the agent's context. Claude Code's Stop hook supports `decision: "block"` with a `reason` field that gets injected directly into the conversation — this is what lets Claude read the available commands and make an informed choice.
+OpenRouter is optional — Codex works out of the box with a local OpenAI key.
 
 ## Requirements
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 - [Codex CLI](https://github.com/openai/codex)
-- [OpenRouter](https://openrouter.ai) account
 
 ## License
 
