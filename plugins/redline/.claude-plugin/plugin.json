@@ -1,6 +1,6 @@
 {
   "name": "redline",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Automatic code review, adversarial review, and rescue via Codex.",
   "author": { "name": "Alex Atallah" },
   "userConfig": {

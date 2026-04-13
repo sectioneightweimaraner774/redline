@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- **Fix empty skill body crash** — `check.md` now has body content; previously the empty body caused an Anthropic API error (`invalid_request_error`) when the skill was invoked
+- **Streamlined check skill** — moved decision logic from frontmatter description into the skill body; shortened description to a one-liner
+
 ## 0.5.0
 
 - **Claude Code plugin** — complete rewrite as a native plugin, installable via marketplace
