@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.2
+
+- **Review any diff** — `/redline:review` and `/redline:adversarial` now accept arguments to control what gets reviewed: `last 3 commits`, `against main`, `commit abc123`, or raw Codex flags (`--base`, `--commit`). Defaults to `--uncommitted` when no arguments are given.
+
 ## 0.5.1
 
 - **Fix empty skill body crash** — `check.md` now has body content; previously the empty body caused an Anthropic API error (`invalid_request_error`) when the skill was invoked

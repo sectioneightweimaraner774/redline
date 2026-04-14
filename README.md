@@ -51,17 +51,24 @@ claude --plugin-dir ./plugins/redline
 | Command | Description |
 |---------|-------------|
 | `/redline:setup` | Configure provider (OpenAI or OpenRouter), model, effort, and routing |
-| `/redline:review` | Run a standard code review on uncommitted changes |
-| `/redline:adversarial` | Challenge design decisions, probe assumptions, test failure modes |
+| `/redline:review [target]` | Run a standard code review (defaults to uncommitted changes) |
+| `/redline:adversarial [target]` | Challenge design decisions, probe assumptions, test failure modes |
 | `/redline:rescue <task>` | Delegate a task to Codex for help when stuck |
 
-### `/redline:review`
+### `/redline:review [target]`
 
-Standard code review. Runs `codex exec review --uncommitted` in the background, assesses findings, and presents issues to the user.
+Standard code review. By default reviews uncommitted changes. Pass an argument to review other diffs:
 
-### `/redline:adversarial`
+```
+/redline:review                    # uncommitted changes (default)
+/redline:review last 3 commits     # cumulative diff of last 3 commits
+/redline:review against main       # changes vs main branch
+/redline:review commit abc123      # single commit
+```
 
-Goes beyond bug-finding. Challenges design decisions, probes hidden assumptions (what is the code silently relying on?), identifies failure modes (race conditions, resource exhaustion, stale state), and questions trade-offs. Asks: is this the right approach?
+### `/redline:adversarial [target]`
+
+Goes beyond bug-finding. Challenges design decisions, probes hidden assumptions (what is the code silently relying on?), identifies failure modes (race conditions, resource exhaustion, stale state), and questions trade-offs. Accepts the same target arguments as `/redline:review`.
 
 ### `/redline:rescue`
 
